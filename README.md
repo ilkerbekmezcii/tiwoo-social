@@ -61,11 +61,6 @@ Bir hesap oluştur, ilk paylaşımını yap ve Tiwoo topluluğunun ilk kullanıc
 
 Tiwoo aktif olarak geliştirilmektedir. Bu GitHub deposu yalnızca **Tiwoo'nun herkese açık tanıtım deposudur**. Üretim kaynak kodu ve altyapı ayrı ve özel olarak tutulmaktadır.
 
-## Bağlantılar
-
-- Tiwoo: https://tiwoo.vercel.app
-- GitHub: https://github.com/ilkerbekmezcii
-
 ---
 
 **Tiwoo · Sosyal akışın senin ritminde.**
