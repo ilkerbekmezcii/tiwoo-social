@@ -14,7 +14,7 @@ Herkese açık gönderileri hesap açmadan okuyabilirsin. Gönderi paylaşmak, b
 
 **Yeni bir sosyal platformu en başından keşfetmek istiyorsan şimdi Tiwoo'ya katıl.**
 
-## Ekran Görörüntüleri
+## Ekran Görüntüleri
 
 ### Masaüstü
 ![Tiwoo masaüstü](screenshots/tiwoo-desktop.svg)
@@ -36,7 +36,14 @@ Herkese açık gönderileri hesap açmadan okuyabilirsin. Gönderi paylaşmak, b
 - Herkese açık ve gizli hesap seçenekleri
 - Mobil uyumlu web arayüzü
 - E-posta ve parola ile kayıt ve giriş
+- Tiwoo puan sistemi
 - Sade ve hızlı web deneyimi
+
+## Puan Sistemi
+
+Tiwoo'da aktif kullanım yalnızca paylaşım yapmakla sınırlı değildir. Gönderi paylaşma ve sosyal etkileşimler üzerinden **Tiwoo puanı** kazanılabilir. Topladığın puan hesabında görünür ve Tiwoo içindeki etkinliğini yansıtan ayrı bir değer olarak takip edilir.
+
+Puan sistemi, topluluğa katılımı ve etkileşimi daha eğlenceli hale getirmek için Tiwoo'nun temel özelliklerinden biri olarak geliştirilmektedir.
 
 ## Neden Tiwoo?
 
