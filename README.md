@@ -3,7 +3,6 @@
 > İnsanları, fikirleri ve gündemi keşfet. Paylaş, takip et, mesajlaş ve kendi topluluğunu oluştur.
 
 [![Canlı](https://img.shields.io/badge/Canlı-tiwoo.vercel.app-635BFF?style=for-the-badge)](https://tiwoo.vercel.app)
-[![Mobil](https://img.shields.io/badge/Mobil-Android-16A34A?style=for-the-badge)](https://tiwoo.vercel.app)
 
 **Tiwoo**, herkese açık paylaşımları keşfetmeyi, insanlarla bağlantı kurmayı ve sade bir sosyal akış içinde etkileşimde bulunmayı amaçlayan bağımsız bir sosyal platformdur.
 
@@ -11,11 +10,11 @@
 
 **Canlı site:** https://tiwoo.vercel.app
 
-Herkese açık gönderileri hesap açmadan okuyabilirsin. Gönderi paylaşmak, beğenmek, yanıtlamak, yeniden paylaşmak, kullanıcıları takip etmek ve özel mesaj göndermek için ücretsiz bir Tiwoo hesabı oluşturabilirsin.
+Herkese açık gönderileri hesap açmadan okuyabilirsin. Gönderi paylaşmak, beğenmek, yanıtlamak, yeniden paylaşmak, kullanıcıları takip etmek ve özel mesaj göndermek için bir Tiwoo hesabı oluşturabilirsin.
 
 **Yeni bir sosyal platformu en başından keşfetmek istiyorsan şimdi Tiwoo'ya katıl.**
 
-## Ekran Görüntüleri
+## Ekran Görörüntüleri
 
 ### Masaüstü
 ![Tiwoo masaüstü](screenshots/tiwoo-desktop.svg)
@@ -34,11 +33,9 @@ Herkese açık gönderileri hesap açmadan okuyabilirsin. Gönderi paylaşmak, b
 - Beğeni, yanıt ve yeniden paylaşım
 - Özel mesajlaşma
 - Bildirimler
-- Android bildirim desteği
 - Herkese açık ve gizli hesap seçenekleri
-- Mobil uyumlu arayüz
-- E-posta ile kayıt ve giriş
-- Google ile giriş
+- Mobil uyumlu web arayüzü
+- E-posta ve parola ile kayıt ve giriş
 - Sade ve hızlı web deneyimi
 
 ## Neden Tiwoo?
