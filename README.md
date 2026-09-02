@@ -1,55 +1,67 @@
-# Tiwoo — Social Pulse
+# Tiwoo — Sosyal Akış
 
-> Discover people, ideas and public conversations. **Read without an account; join when you want to take part.**
+> İnsanları, fikirleri ve gündemi keşfet. Paylaş, takip et, mesajlaş ve kendi topluluğunu oluştur.
 
-[![Join Tiwoo](https://img.shields.io/badge/JOIN%20TIWOO-tiwoo.vercel.app-635BFF?style=for-the-badge)](https://tiwoo.vercel.app)
-[![Public timeline](https://img.shields.io/badge/Public%20timeline-Explore-111827?style=for-the-badge)](https://tiwoo.vercel.app)
+[![Canlı](https://img.shields.io/badge/Canlı-tiwoo.vercel.app-635BFF?style=for-the-badge)](https://tiwoo.vercel.app)
+[![Mobil](https://img.shields.io/badge/Mobil-Android-16A34A?style=for-the-badge)](https://tiwoo.vercel.app)
 
-## 🚀 Join Tiwoo
+**Tiwoo**, herkese açık paylaşımları keşfetmeyi, insanlarla bağlantı kurmayı ve sade bir sosyal akış içinde etkileşimde bulunmayı amaçlayan bağımsız bir sosyal platformdur.
 
-**Live:** https://tiwoo.vercel.app
+## Tiwoo'ya Katıl
 
-Tiwoo is an independent social platform built around a clean public timeline, profiles, follows, replies, reposts, private messaging and practical privacy controls.
+**Canlı site:** https://tiwoo.vercel.app
 
-You can browse public posts immediately. Create an account to post, like, reply, repost, follow people and send messages.
+Herkese açık gönderileri hesap açmadan okuyabilirsin. Gönderi paylaşmak, beğenmek, yanıtlamak, yeniden paylaşmak, kullanıcıları takip etmek ve özel mesaj göndermek için ücretsiz bir Tiwoo hesabı oluşturabilirsin.
 
-### 🇹🇷 Tiwoo'ya katıl
+**Yeni bir sosyal platformu en başından keşfetmek istiyorsan şimdi Tiwoo'ya katıl.**
 
-Herkese açık paylaşımları hesap açmadan okuyabilirsin. Paylaşım yapmak, beğenmek, yanıtlamak, yeniden paylaşmak, kullanıcıları takip etmek ve mesajlaşmak için ücretsiz hesap oluşturabilirsin.
+## Ekran Görüntüleri
 
-**Katıl:** https://tiwoo.vercel.app
+### Masaüstü
+![Tiwoo masaüstü](screenshots/tiwoo-desktop.svg)
 
-## Screenshots
+### Mobil
+![Tiwoo mobil](screenshots/tiwoo-mobile.svg)
 
-### Desktop
-![Tiwoo desktop](screenshots/tiwoo-desktop.svg)
+### Giriş Ekranı
+![Tiwoo giriş ekranı](screenshots/tiwoo-login.svg)
 
-### Mobile
-![Tiwoo mobile](screenshots/tiwoo-mobile.svg)
+## Özellikler
 
-### Sign in
-![Tiwoo sign in](screenshots/tiwoo-login.svg)
+- Herkese açık sosyal akış
+- Kullanıcı profilleri
+- Takip etme ve takipçi sistemi
+- Beğeni, yanıt ve yeniden paylaşım
+- Özel mesajlaşma
+- Bildirimler
+- Android bildirim desteği
+- Herkese açık ve gizli hesap seçenekleri
+- Mobil uyumlu arayüz
+- E-posta ile kayıt ve giriş
+- Google ile giriş
+- Sade ve hızlı web deneyimi
 
-## Highlights
+## Neden Tiwoo?
 
-- Public social timeline
-- User profiles and follow system
-- Likes, replies and reposts
-- Private messaging
-- Notifications
-- Public/private account controls
-- Responsive mobile interface
-- Google and email authentication
-- Lightweight browser-first experience
+Tiwoo'nun amacı sosyal medya deneyimini gereksiz karmaşadan uzak tutmak. Herkese açık içerikler doğrudan keşfedilebilir; paylaşım, etkileşim, takip ve mesajlaşma gibi sosyal özellikler ise kullanıcı hesabı üzerinden çalışır.
 
-## Help Tiwoo grow
+Tiwoo şu anda Türkçe olarak geliştirilmektedir ve yeni özelliklerle düzenli olarak güncellenmektedir.
 
-If you discover Tiwoo through GitHub, **visit the live app, create an account and share your first post.** If you want to support visibility here, you can also star this showcase repository.
+## Hemen Başla
 
-## About this repository
+👉 **https://tiwoo.vercel.app**
 
-This repository is the **public product showcase** for Tiwoo. Production source code, credentials and infrastructure are maintained separately and are not published here.
+Bir hesap oluştur, ilk paylaşımını yap ve Tiwoo topluluğunun ilk kullanıcılarından biri ol.
+
+## Proje Durumu
+
+Tiwoo aktif olarak geliştirilmektedir. Bu GitHub deposu yalnızca **Tiwoo'nun herkese açık tanıtım deposudur**. Üretim kaynak kodu ve altyapı ayrı ve özel olarak tutulmaktadır.
+
+## Bağlantılar
+
+- Tiwoo: https://tiwoo.vercel.app
+- GitHub: https://github.com/ilkerbekmezcii
 
 ---
 
-**Tiwoo · Social Pulse** — https://tiwoo.vercel.app
+**Tiwoo · Sosyal akışın senin ritminde.**
