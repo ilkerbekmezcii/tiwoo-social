@@ -1,1 +1,0 @@
-Bu depo Tiwoo'nun Türkçe tanıtım deposudur. Ana tanıtım metni README.md dosyasındadır.
