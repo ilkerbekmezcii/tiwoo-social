@@ -2,13 +2,13 @@
 
 > İnsanları, fikirleri ve gündemi keşfet. Paylaş, takip et, mesajlaş ve kendi topluluğunu oluştur.
 
-[![Canlı](https://img.shields.io/badge/Canlı-tiwoo.vercel.app-635BFF?style=for-the-badge)](https://tiwoo.vercel.app)
+[![Canlı](https://img.shields.io/badge/Canlı-tiwoo.vercel.app-635BFF?style=for-the-badge)](https://tiwoo.vercel.app/?utm_source=github&utm_medium=repo&utm_campaign=tiwoo_launch)
 
 **Tiwoo**, herkese açık paylaşımları keşfetmeyi, insanlarla bağlantı kurmayı ve sade bir sosyal akış içinde etkileşimde bulunmayı amaçlayan bağımsız bir sosyal platformdur.
 
 ## Tiwoo'ya Katıl
 
-**Canlı site:** https://tiwoo.vercel.app
+**Canlı site:** https://tiwoo.vercel.app/?utm_source=github&utm_medium=repo&utm_campaign=tiwoo_launch
 
 Herkese açık gönderileri hesap açmadan okuyabilirsin. Gönderi paylaşmak, beğenmek, yanıtlamak, yeniden paylaşmak, kullanıcıları takip etmek ve özel mesaj göndermek için bir Tiwoo hesabı oluşturabilirsin.
 
@@ -53,7 +53,7 @@ Tiwoo şu anda Türkçe olarak geliştirilmektedir ve yeni özelliklerle düzenl
 
 ## Hemen Başla
 
-👉 **https://tiwoo.vercel.app**
+👉 **https://tiwoo.vercel.app/?utm_source=github&utm_medium=repo&utm_campaign=tiwoo_launch**
 
 Bir hesap oluştur, ilk paylaşımını yap ve Tiwoo topluluğunun ilk kullanıcılarından biri ol.
 
