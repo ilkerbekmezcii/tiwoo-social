@@ -1,18 +1,21 @@
-# Tiwoo — Sosyal Akış
+# Tiwoo — Türkçe Sosyal Platform
 
 > İnsanları, fikirleri ve gündemi keşfet. Paylaş, takip et, mesajlaş ve kendi topluluğunu oluştur.
 
-[![Canlı](https://img.shields.io/badge/Canlı-tiwoo.vercel.app-635BFF?style=for-the-badge)](https://tiwoo.vercel.app/?utm_source=github&utm_medium=repo&utm_campaign=tiwoo_launch)
+[![Canlı](https://img.shields.io/badge/Canlı-tiwoo.vercel.app-635BFF?style=for-the-badge)](https://tiwoo.vercel.app/?utm_source=github&utm_medium=repo&utm_campaign=tiwoo_organic_acquisition)
+[![Ücretsiz Katıl](https://img.shields.io/badge/Ücretsiz-Katıl-111827?style=for-the-badge)](https://tiwoo.vercel.app/?signup=1&utm_source=github&utm_medium=repo&utm_campaign=tiwoo_organic_acquisition)
 
-**Tiwoo**, herkese açık paylaşımları keşfetmeyi, insanlarla bağlantı kurmayı ve sade bir sosyal akış içinde etkileşimde bulunmayı amaçlayan bağımsız bir sosyal platformdur.
+**Tiwoo**, herkese açık paylaşımları keşfetmeyi, insanlarla bağlantı kurmayı ve sade bir sosyal akış içinde etkileşimde bulunmayı amaçlayan bağımsız, Türkçe bir sosyal platformdur. Sosyal akış, kullanıcı profilleri, takip, beğeni, yanıt, yeniden paylaşım, bildirim ve özel mesajlaşma özelliklerini tek yerde toplar.
 
 ## Tiwoo'ya Katıl
 
-**Canlı site:** https://tiwoo.vercel.app/?utm_source=github&utm_medium=repo&utm_campaign=tiwoo_launch
+**Herkese açık akış:** https://tiwoo.vercel.app/?utm_source=github&utm_medium=repo&utm_campaign=tiwoo_organic_acquisition
+
+**Doğrudan hesap oluştur:** https://tiwoo.vercel.app/?signup=1&utm_source=github&utm_medium=repo&utm_campaign=tiwoo_organic_acquisition
 
 Herkese açık gönderileri hesap açmadan okuyabilirsin. Gönderi paylaşmak, beğenmek, yanıtlamak, yeniden paylaşmak, kullanıcıları takip etmek ve özel mesaj göndermek için bir Tiwoo hesabı oluşturabilirsin.
 
-**Yeni bir sosyal platformu en başından keşfetmek istiyorsan şimdi Tiwoo'ya katıl.**
+Yeni bir Türkçe sosyal ağı en başından keşfetmek, ilk kullanıcılar arasında yer almak ve kendi çevreni oluşturmak istiyorsan Tiwoo'ya katıl.
 
 ## Ekran Görüntüleri
 
@@ -43,17 +46,17 @@ Herkese açık gönderileri hesap açmadan okuyabilirsin. Gönderi paylaşmak, b
 
 Tiwoo'da aktif kullanım yalnızca paylaşım yapmakla sınırlı değildir. Gönderi paylaşma ve sosyal etkileşimler üzerinden **Tiwoo puanı** kazanılabilir. Topladığın puan hesabında görünür ve Tiwoo içindeki etkinliğini yansıtan ayrı bir değer olarak takip edilir.
 
-Puan sistemi, topluluğa katılımı ve etkileşimi daha eğlenceli hale getirmek için Tiwoo'nun temel özelliklerinden biri olarak geliştirilmektedir.
+Puan sistemi, topluluğa katılımı ve etkileşimi daha eğlenceli hale getirmek için Tiwoo'nun temel özelliklerinden biridir.
 
 ## Neden Tiwoo?
 
 Tiwoo'nun amacı sosyal medya deneyimini gereksiz karmaşadan uzak tutmak. Herkese açık içerikler doğrudan keşfedilebilir; paylaşım, etkileşim, takip ve mesajlaşma gibi sosyal özellikler ise kullanıcı hesabı üzerinden çalışır.
 
-Tiwoo şu anda Türkçe olarak geliştirilmektedir ve yeni özelliklerle düzenli olarak güncellenmektedir.
+Tiwoo Türkçe olarak geliştirilmektedir ve yeni özelliklerle düzenli olarak güncellenmektedir.
 
 ## Hemen Başla
 
-👉 **https://tiwoo.vercel.app/?utm_source=github&utm_medium=repo&utm_campaign=tiwoo_launch**
+**[Tiwoo'da ücretsiz hesap oluştur](https://tiwoo.vercel.app/?signup=1&utm_source=github&utm_medium=repo&utm_campaign=tiwoo_organic_acquisition)**
 
 Bir hesap oluştur, ilk paylaşımını yap ve Tiwoo topluluğunun ilk kullanıcılarından biri ol.
 
