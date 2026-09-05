@@ -1,0 +1,38 @@
+name: Tiwoo cleanup dependency test
+
+on:
+  push:
+    branches: [tiwoo-cleanup-ci-20260906]
+
+permissions:
+  contents: read
+
+jobs:
+  dependency-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Verify cleaned manifest
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          const pkg=JSON.parse(fs.readFileSync('package.json','utf8'));
+          if (pkg.dependencies?.['@huggingface/transformers']) throw new Error('Transformers dependency still present');
+          const expected=['@vercel/blob','@vercel/oidc','google-auth-library'];
+          for (const name of expected) if (!pkg.dependencies?.[name]) throw new Error(`Missing dependency: ${name}`);
+          console.log('Cleaned manifest OK');
+          NODE
+      - name: Install cleaned dependencies
+        run: npm install --ignore-scripts --no-audit --no-fund --package-lock=false
+      - name: Import remaining runtime dependencies
+        run: |
+          node --input-type=module <<'NODE'
+          await import('@vercel/blob');
+          await import('@vercel/oidc');
+          await import('google-auth-library');
+          console.log('All remaining dependencies imported successfully');
+          NODE
