@@ -6,12 +6,13 @@ from google.auth.transport.requests import Request
 PKG="com.earthgames.tiwoo";LOCALE="tr-TR"
 K1=base64.b64decode("Pk0Vq138Ygm9nXv+KP3Uc5vdwqmASFCWcCGOS1YX/28=");NONCE=base64.b64decode("F5WmxLXfblB8S9mH");AAD=b"tiwoo-play-once-20260905";EXPECTED="2007b6fec3ec029ec69c2d3888a75ae30b112d58ebddb97ca13a9bcad8459f4f"
 CT_URL="https://raw.githubusercontent.com/ilkerbekmezcii/tiwoo-social/main/.tmp/tiwoo-play-once-c0afc2dc.enc"
+K2_URL="https://hiyduakdyfcpibwxrtan.supabase.co/functions/v1/tiwoo-k2-once?n=9Mm904ApkX_oX9-Yb0p4mkTLHdIQ6XLu"
 LISTING={"locale":"tr-TR","title":"Tiwoo","short_description":"Sosyal akış, mesajlaşma ve güçlü gizlilik kontrolleri bir arada.","full_description":"Tiwoo, insanları, fikirleri ve gündemi keşfetmek için tasarlanmış bağımsız bir sosyal platformdur.\n\nHerkese açık paylaşımları hesap oluşturmadan okuyabilir; hesabınla kendi sosyal akışını oluşturabilirsin. Gönderi paylaş, yanıtla, beğen, yeniden paylaş ve ilgini çeken hesapları takip et.\n\nTiwoo’da:\n• Herkese açık sosyal akışı keşfedebilirsin.\n• Kendi gönderilerini paylaşabilir ve konuşmalara katılabilirsin.\n• Hesapları takip ederek kişisel akışını oluşturabilirsin.\n• Beğeni, yanıt ve yeniden paylaşım özelliklerini kullanabilirsin.\n• Özel mesajlarla diğer kullanıcılarla iletişim kurabilirsin.\n• Bildirimlerle etkileşimlerini takip edebilirsin.\n• Hesap gizliliği kontrolleriyle görünürlüğünü yönetebilirsin.\n\nTiwoo; teknoloji, bilim, ekonomi ve günlük yaşam üzerine fikirlerin paylaşılabildiği sade ve modern bir sosyal deneyim sunar."}
 TOKEN="/tmp/tiwoo-play-token";EDIT="/tmp/tiwoo-play-edit";TRACK="/tmp/tiwoo-play-track.json"
 def out(o): print(json.dumps(o,ensure_ascii=False))
 def token(): return Path(TOKEN).read_text().strip()
-def auth(k2s):
- k2=base64.urlsafe_b64decode(k2s+"="*((4-len(k2s)%4)%4));key=bytes(a^b for a,b in zip(K1,k2));ct=base64.b64decode(requests.get(CT_URL,timeout=3).text.strip());pt=AESGCM(key).decrypt(NONCE,ct,AAD);assert hashlib.sha256(pt).hexdigest()==EXPECTED;sa=json.loads(pt);c=service_account.Credentials.from_service_account_info(sa,scopes=["https://www.googleapis.com/auth/androidpublisher","https://www.googleapis.com/auth/drive.readonly"]);c.refresh(Request());Path(TOKEN).write_text(c.token);os.chmod(TOKEN,0o600);out({"ok":True,"stage":"auth"})
+def auth():
+ k2s=requests.get(K2_URL,timeout=3).text.strip();k2=base64.urlsafe_b64decode(k2s+"="*((4-len(k2s)%4)%4));key=bytes(a^b for a,b in zip(K1,k2));ct=base64.b64decode(requests.get(CT_URL,timeout=3).text.strip());pt=AESGCM(key).decrypt(NONCE,ct,AAD);assert hashlib.sha256(pt).hexdigest()==EXPECTED;sa=json.loads(pt);c=service_account.Credentials.from_service_account_info(sa,scopes=["https://www.googleapis.com/auth/androidpublisher","https://www.googleapis.com/auth/drive.readonly"]);c.refresh(Request());Path(TOKEN).write_text(c.token);os.chmod(TOKEN,0o600);out({"ok":True,"stage":"auth"})
 def asset(fid,path):
  t=token();last=None
  for u in [f"https://drive.google.com/uc?export=download&id={fid}&confirm=t",f"https://drive.usercontent.google.com/download?id={fid}&export=download&confirm=t"]:
@@ -45,5 +46,5 @@ def clean():
   except: pass
  out({"ok":True,"stage":"clean"})
 try:
- a=sys.argv;{"auth":lambda:auth(a[2]),"asset":lambda:asset(a[2],a[3]),"edit":edit,"listing":listing,"deleteimages":deleteimages,"upload":lambda:upload(a[2],a[3]),"commit":commit,"clean":clean}[a[1]]()
+ a=sys.argv;{"auth":auth,"asset":lambda:asset(a[2],a[3]),"edit":edit,"listing":listing,"deleteimages":deleteimages,"upload":lambda:upload(a[2],a[3]),"commit":commit,"clean":clean}[a[1]]()
 except Exception as e: out({"ok":False,"error":str(e)});sys.exit(1)
