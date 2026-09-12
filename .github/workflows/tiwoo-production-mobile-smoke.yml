@@ -1,0 +1,23 @@
+name: Tiwoo production mobile smoke
+on:
+  push:
+    paths:
+      - .github/workflows/tiwoo-production-mobile-smoke.yml
+  workflow_dispatch:
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Verify production mobile navigation
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsSL --retry 4 --retry-delay 2 https://tiwoo.vercel.app/auth-registration.js -o /tmp/boot.js
+          curl -fsSL --retry 4 --retry-delay 2 https://tiwoo.vercel.app/mobile-v2.js -o /tmp/mobile.js
+          grep -Fq '/mobile-v2.js?v=20260912v2' /tmp/boot.js
+          ! grep -Fq '/mobile-friends-nav.js' /tmp/boot.js
+          ! grep -Fq 'data-tiwoo-mobile-friends-nav' /tmp/boot.js
+          grep -Fq "['home','friends','compose','notifications','profile']" /tmp/mobile.js
+          grep -Fq "const extraItems=[['bookmarks','bookmark','Yer İşaretleri'],['settings','settings','Ayarlar']]" /tmp/mobile.js
+          echo 'Production mobile navigation smoke test passed.'
