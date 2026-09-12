@@ -61,7 +61,7 @@ jobs:
           try{
             const response=await page.goto('https://tiwoo.vercel.app/?authenticated_runner_smoke=1',{waitUntil:'domcontentloaded',timeout:45000});
             assert(response&&response.status()===200,'production document is not HTTP 200');
-            await page.waitForFunction(()=>window.__tiwooRelease==='20260912r3',null,{timeout:20000});
+            await page.waitForFunction(()=>window.__tiwooRelease==='20260912r4',null,{timeout:20000});
             await page.locator('#publicRegisterHero').click();
             await page.locator('#tiwooNormalChoice').waitFor({state:'attached',timeout:15000});
             await page.locator('#tiwooNormalChoice').evaluate(el=>el.click());
@@ -78,6 +78,7 @@ jobs:
             assert.equal(String(identity.handle||'').replace(/^@/,''),username,'registered user session did not become active');
             assert.equal(identity.isAdmin,false,'temporary user unexpectedly has admin privileges');
             assert.equal(await page.locator('[data-admin-mode-toggle]:visible').count(),0,'regular user can see Admin mode');
+            assert.equal(await page.locator('[data-management-panel]:visible').count(),0,'regular user can see Management Panel');
             const privilegeScripts=await page.evaluate(()=>[...document.scripts].map(s=>s.src).filter(src=>/inapp-admin-tools|admin-reply-tools/.test(src)));
             assert.equal(privilegeScripts.length,0,'regular user loaded admin privilege scripts');
 
@@ -104,31 +105,28 @@ jobs:
             const postId=Number(await root.getAttribute('data-post'));
             assert(postId>0,'created post has no id');
 
-            for(let i=1;i<=6;i++){
+            for(let i=1;i<=2;i++){
               const current=page.locator(`[data-post="${postId}"]`).first();
               await current.locator('[data-act="reply"]').click();
               await page.locator('#replyModal').waitFor({state:'visible',timeout:10000});
               await page.locator('#replyModalText').fill(`E2E reply ${i} ${suffix}`);
               await page.locator('#replyModalSend').click();
               await page.locator('#replyModal').waitFor({state:'hidden',timeout:10000});
-              await page.waitForFunction(({id,n})=>{
-                const p=[...document.querySelectorAll('[data-post]')].find(el=>Number(el.dataset.post)===id);
-                const label=document.querySelector('.conversation-label');
-                return !!p&&(!label||String(label.textContent||'').includes(`Yanıtlar · ${n}`));
-              },{id:postId,n:i},{timeout:10000});
-              await page.waitForTimeout(250);
+              await page.waitForTimeout(350);
             }
 
             await page.locator('#mobileNav [data-nav="home"]').click();
             const preview=page.locator(`.home-reply-preview[data-home-thread="${postId}"]`);
             await preview.waitFor({state:'visible',timeout:15000});
-            assert.equal(await preview.locator('.home-reply-row').count(),5,'home does not show exactly first five replies');
-            const more=preview.locator('[data-home-more]');
+            assert.equal(await preview.locator('.home-reply-row').count(),2,'home does not show the two reply previews');
+            const more=preview.locator('[data-home-continue]');
             await more.waitFor({state:'visible'});
-            assert.match(await more.textContent(),/^Diğer yanıtları gör \(1\)$/,'remaining-replies button text/count is wrong');
+            assert.equal((await more.textContent()).trim(),'Devamını gör','home reply continuation label is wrong');
             await more.click();
-            assert.equal(await preview.locator('.home-reply-row').count(),6,'remaining replies did not expand in-place');
-            assert.equal((await page.locator(`[data-post="${postId}"] button`).allTextContents()).some(t=>t.trim()==='Yanıtları gör'),false,'root post still exposes obsolete Yanıtları gör button');
+            await page.waitForFunction(id=>typeof state!=='undefined'&&state?.view==='detail'&&Number(state?.detail)===id,postId,{timeout:10000});
+            await page.locator('.conversation-label').waitFor({state:'visible',timeout:10000});
+            assert.match((await page.locator('.conversation-label').textContent())||'',/Yanıtlar\s*·\s*2/,'continuation did not open the complete two-reply thread');
+            assert.equal(await page.locator('.reply-card').count(),2,'full thread does not contain both replies');
 
             const profileRuntime=await page.evaluate(async()=>await (await fetch('/composer-mention-fixes.js?authenticated-smoke=1',{cache:'no-store'})).text());
             assert(profileRuntime.includes("BOT_PROFILE_HANDLES=new Set(['@luna','@lina'])"),'live bot-profile runtime does not target Luna/Lina');
@@ -136,6 +134,7 @@ jobs:
 
             await page.screenshot({path:'/tmp/tiwoo-authenticated-production.png',fullPage:true});
             console.log(JSON.stringify({ok:true,usernameRedacted:true,postId,navGeometry,consoleErrors,firstPartyServerErrors},null,2));
+            assert.equal(consoleErrors.length,0,`browser console errors detected: ${JSON.stringify(consoleErrors)}`);
             assert.equal(firstPartyServerErrors.length,0,`first-party 5xx responses detected: ${JSON.stringify(firstPartyServerErrors)}`);
           }finally{
             const result=await cleanup();
