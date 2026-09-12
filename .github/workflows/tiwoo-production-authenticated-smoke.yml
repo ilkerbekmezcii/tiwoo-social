@@ -1,0 +1,157 @@
+name: Tiwoo authenticated production smoke
+on:
+  push:
+    paths:
+      - .github/workflows/tiwoo-production-authenticated-smoke.yml
+  workflow_dispatch:
+
+jobs:
+  authenticated-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Prepare Playwright
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/tiwoo-auth-smoke
+          cd /tmp/tiwoo-auth-smoke
+          npm init -y >/dev/null
+          npm install --no-audit --no-fund playwright@1.55.0
+          npx playwright install --with-deps chromium
+
+      - name: Exercise live production as a real user
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat >/tmp/tiwoo-auth-smoke/test.mjs <<'EOF'
+          import { chromium } from 'playwright';
+          import assert from 'node:assert/strict';
+
+          const browser=await chromium.launch({headless:true});
+          const context=await browser.newContext({viewport:{width:390,height:844},deviceScaleFactor:1,locale:'tr-TR'});
+          const page=await context.newPage();
+          const consoleErrors=[];
+          page.on('console',m=>{if(m.type()==='error')consoleErrors.push(m.text())});
+          page.on('pageerror',e=>consoleErrors.push(String(e)));
+
+          const suffix=(Date.now().toString(36)+Math.random().toString(36).slice(2,6)).slice(-11);
+          const username=`e2e_${suffix}`.slice(0,20);
+          const password=`T!${Date.now()}a9`;
+          const postText=`E2E production smoke ${suffix}`;
+          let accountCreated=false;
+
+          async function cleanup(){
+            if(!accountCreated)return {skipped:true};
+            try{
+              return await page.evaluate(async username=>{
+                const session=(await window.TiwooSupabase?.sb?.auth?.getSession?.())?.data?.session;
+                const token=String(session?.access_token||'');
+                const headers={'content-type':'application/json'};
+                if(token)headers.authorization=`Bearer ${token}`;
+                const r=await fetch('/api/tiwoo-auth',{method:'POST',headers,credentials:'same-origin',cache:'no-store',body:JSON.stringify({action:'account_delete',confirmation:username,acknowledged:true})});
+                const d=await r.json().catch(()=>({}));
+                return {ok:r.ok&&d?.ok===true,status:r.status,error:d?.error||null};
+              },username);
+            }catch(error){return {ok:false,error:String(error)}}
+          }
+
+          try{
+            const response=await page.goto('https://tiwoo.vercel.app/?authenticated_runner_smoke=1',{waitUntil:'domcontentloaded',timeout:45000});
+            assert(response&&response.status()===200,'production document is not HTTP 200');
+            await page.waitForFunction(()=>window.__tiwooRelease==='20260912r3',null,{timeout:20000});
+            await page.locator('#publicRegisterHero').click();
+            await page.locator('#tiwooNormalChoice').waitFor({state:'visible',timeout:15000});
+            await page.locator('#tiwooNormalChoice').click();
+            await page.locator('#authName').fill('Tiwoo E2E');
+            await page.locator('#tiwooUsername').fill(username);
+            await page.locator('#authPassword').fill(password);
+            await page.locator('#authSubmit').click();
+            await page.waitForFunction(()=>document.getElementById('app')&&!document.getElementById('app').classList.contains('hidden')&&typeof me!=='undefined'&&me?.handle,{timeout:30000});
+            accountCreated=true;
+            await page.waitForTimeout(2500);
+
+            const identity=await page.evaluate(()=>({handle:typeof me!=='undefined'?me?.handle:null,isAdmin:typeof me!=='undefined'?!!me?.isAdmin:null}));
+            assert.equal(String(identity.handle||'').replace(/^@/,''),username,'registered user session did not become active');
+            assert.equal(identity.isAdmin,false,'temporary user unexpectedly has admin privileges');
+            assert.equal(await page.locator('[data-admin-mode-toggle]:visible').count(),0,'regular user can see Admin mode');
+            const privilegeScripts=await page.evaluate(()=>[...document.scripts].map(s=>s.src).filter(src=>/inapp-admin-tools|admin-reply-tools/.test(src)));
+            assert.equal(privilegeScripts.length,0,'regular user loaded admin privilege scripts');
+
+            const navGeometry=await page.evaluate(()=>{
+              const nav=document.getElementById('mobileNav'),r=nav.getBoundingClientRect(),view=document.getElementById('view'),toolbar=document.querySelector('#view>.feed-toolbar');
+              return {bottomGap:Math.abs(innerHeight-r.bottom),leftGap:Math.abs(r.left),rightGap:Math.abs(innerWidth-r.right),viewPaddingTop:getComputedStyle(view).paddingTop,toolbarDisplay:toolbar?getComputedStyle(toolbar).display:null};
+            });
+            assert(navGeometry.bottomGap<=1&&navGeometry.leftGap<=1&&navGeometry.rightGap<=1,'mobile navigation is not flush to viewport edges');
+            assert.equal(navGeometry.viewPaddingTop,'0px','home view still has top padding');
+            if(navGeometry.toolbarDisplay!==null)assert.equal(navGeometry.toolbarDisplay,'none','hidden home toolbar still occupies space');
+
+            await page.locator('#mobileNav [data-compose-mobile]').click();
+            await page.locator('#composeText').fill('Luna');
+            await page.waitForTimeout(500);
+            assert.equal(await page.locator('.mention-popover:visible').count(),0,'plain name triggered automatic user lookup without @');
+            await page.locator('#composeText').fill('@lu');
+            await page.waitForTimeout(700);
+            assert((await page.locator('.mention-popover:visible [data-mention-index]').count())>0,'@handle did not trigger mention lookup');
+            await page.locator('#composeText').fill(postText);
+            await page.locator('#composeSend').click();
+
+            const root=page.locator('[data-post]').filter({hasText:postText}).first();
+            await root.waitFor({state:'visible',timeout:15000});
+            const postId=Number(await root.getAttribute('data-post'));
+            assert(postId>0,'created post has no id');
+
+            for(let i=1;i<=6;i++){
+              const current=page.locator(`[data-post="${postId}"]`).first();
+              await current.locator('[data-act="reply"]').click();
+              await page.locator('#replyModal').waitFor({state:'visible',timeout:10000});
+              await page.locator('#replyModalText').fill(`E2E reply ${i} ${suffix}`);
+              await page.locator('#replyModalSend').click();
+              await page.locator('#replyModal').waitFor({state:'hidden',timeout:10000});
+              await page.waitForFunction(({id,n})=>{
+                const p=[...document.querySelectorAll('[data-post]')].find(el=>Number(el.dataset.post)===id);
+                const label=document.querySelector('.conversation-label');
+                return !!p&&(!label||String(label.textContent||'').includes(`Yanıtlar · ${n}`));
+              },{id:postId,n:i},{timeout:10000});
+              await page.waitForTimeout(250);
+            }
+
+            await page.locator('#mobileNav [data-nav="home"]').click();
+            const preview=page.locator(`.home-reply-preview[data-home-thread="${postId}"]`);
+            await preview.waitFor({state:'visible',timeout:15000});
+            assert.equal(await preview.locator('.home-reply-row').count(),5,'home does not show exactly first five replies');
+            const more=preview.locator('[data-home-more]');
+            await more.waitFor({state:'visible'});
+            assert.match(await more.textContent(),/^Diğer yanıtları gör \(1\)$/,'remaining-replies button text/count is wrong');
+            await more.click();
+            assert.equal(await preview.locator('.home-reply-row').count(),6,'remaining replies did not expand in-place');
+            assert.equal((await page.locator(`[data-post="${postId}"] button`).allTextContents()).some(t=>t.trim()==='Yanıtları gör'),false,'root post still exposes obsolete Yanıtları gör button');
+
+            const lunaOpened=await page.evaluate(()=>{try{const u=(social?.directory||[]).find(x=>String(x.handle||'').toLowerCase()==='@luna');if(!u)return false;go('profile',{profile:u.key});return true}catch{return false}});
+            assert.equal(lunaOpened,true,'Luna profile not found in live directory');
+            await page.locator('.profile-hero').waitFor({state:'visible',timeout:10000});
+            await page.waitForTimeout(300);
+            assert.equal(await page.locator('#followProfile').count(),0,'bot profile still shows Follow button');
+            const msgHeight=await page.locator('#msgProfile').evaluate(el=>el.getBoundingClientRect().height);
+            assert(Math.abs(msgHeight-44)<=1,'profile action height is not 44px');
+
+            await page.screenshot({path:'/tmp/tiwoo-authenticated-production.png',fullPage:true});
+            console.log(JSON.stringify({ok:true,usernameRedacted:true,postId,navGeometry,consoleErrors},null,2));
+          }finally{
+            const result=await cleanup();
+            console.log('cleanup',JSON.stringify(result));
+            await browser.close();
+            if(accountCreated)assert.equal(result.ok,true,'temporary production test account cleanup failed');
+          }
+          EOF
+          cd /tmp/tiwoo-auth-smoke
+          node test.mjs
+
+      - name: Upload authenticated screenshot
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tiwoo-authenticated-production-browser
+          path: /tmp/tiwoo-authenticated-production.png
+          if-no-files-found: ignore
+          retention-days: 1
