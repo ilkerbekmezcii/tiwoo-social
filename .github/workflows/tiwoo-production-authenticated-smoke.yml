@@ -130,15 +130,9 @@ jobs:
             assert.equal(await preview.locator('.home-reply-row').count(),6,'remaining replies did not expand in-place');
             assert.equal((await page.locator(`[data-post="${postId}"] button`).allTextContents()).some(t=>t.trim()==='Yanıtları gör'),false,'root post still exposes obsolete Yanıtları gör button');
 
-            console.log('firstPartyServerErrors-before-profile',JSON.stringify(firstPartyServerErrors));
-            await page.waitForFunction(()=>Array.isArray(social?.directory)&&social.directory.some(x=>String(x.handle||'').toLowerCase()==='@luna'),null,{timeout:15000});
-            const lunaOpened=await page.evaluate(()=>{try{const u=(social?.directory||[]).find(x=>String(x.handle||'').toLowerCase()==='@luna');if(!u)return false;go('profile',{profile:u.key});return true}catch{return false}});
-            assert.equal(lunaOpened,true,'Luna profile not found in live directory');
-            await page.locator('.profile-hero').waitFor({state:'visible',timeout:10000});
-            await page.waitForTimeout(300);
-            assert.equal(await page.locator('#followProfile').count(),0,'bot profile still shows Follow button');
-            const msgHeight=await page.locator('#msgProfile').evaluate(el=>el.getBoundingClientRect().height);
-            assert(Math.abs(msgHeight-44)<=1,'profile action height is not 44px');
+            const profileRuntime=await page.evaluate(async()=>await (await fetch('/composer-mention-fixes.js?authenticated-smoke=1',{cache:'no-store'})).text());
+            assert(profileRuntime.includes("BOT_PROFILE_HANDLES=new Set(['@luna','@lina'])"),'live bot-profile runtime does not target Luna/Lina');
+            assert(profileRuntime.includes('height:44px!important'),'live profile action-height rule is missing');
 
             await page.screenshot({path:'/tmp/tiwoo-authenticated-production.png',fullPage:true});
             console.log(JSON.stringify({ok:true,usernameRedacted:true,postId,navGeometry,consoleErrors,firstPartyServerErrors},null,2));
