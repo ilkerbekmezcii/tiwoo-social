@@ -130,6 +130,8 @@ jobs:
             assert.equal(await preview.locator('.home-reply-row').count(),6,'remaining replies did not expand in-place');
             assert.equal((await page.locator(`[data-post="${postId}"] button`).allTextContents()).some(t=>t.trim()==='Yanıtları gör'),false,'root post still exposes obsolete Yanıtları gör button');
 
+            console.log('firstPartyServerErrors-before-profile',JSON.stringify(firstPartyServerErrors));
+            await page.waitForFunction(()=>Array.isArray(social?.directory)&&social.directory.some(x=>String(x.handle||'').toLowerCase()==='@luna'),null,{timeout:15000});
             const lunaOpened=await page.evaluate(()=>{try{const u=(social?.directory||[]).find(x=>String(x.handle||'').toLowerCase()==='@luna');if(!u)return false;go('profile',{profile:u.key});return true}catch{return false}});
             assert.equal(lunaOpened,true,'Luna profile not found in live directory');
             await page.locator('.profile-hero').waitFor({state:'visible',timeout:10000});
