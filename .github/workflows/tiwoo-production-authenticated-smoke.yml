@@ -32,8 +32,10 @@ jobs:
           const context=await browser.newContext({viewport:{width:390,height:844},deviceScaleFactor:1,locale:'tr-TR'});
           const page=await context.newPage();
           const consoleErrors=[];
+          const firstPartyServerErrors=[];
           page.on('console',m=>{if(m.type()==='error')consoleErrors.push(m.text())});
           page.on('pageerror',e=>consoleErrors.push(String(e)));
+          page.on('response',r=>{const url=r.url();if(r.status()>=500&&(url.startsWith('https://tiwoo.vercel.app/')||url.startsWith('https://avpjpoywjyhnvbaqxyip.supabase.co/')))firstPartyServerErrors.push({status:r.status(),url})});
 
           const suffix=(Date.now().toString(36)+Math.random().toString(36).slice(2,6)).slice(-11);
           const username=`e2e_${suffix}`.slice(0,20);
@@ -137,7 +139,8 @@ jobs:
             assert(Math.abs(msgHeight-44)<=1,'profile action height is not 44px');
 
             await page.screenshot({path:'/tmp/tiwoo-authenticated-production.png',fullPage:true});
-            console.log(JSON.stringify({ok:true,usernameRedacted:true,postId,navGeometry,consoleErrors},null,2));
+            console.log(JSON.stringify({ok:true,usernameRedacted:true,postId,navGeometry,consoleErrors,firstPartyServerErrors},null,2));
+            assert.equal(firstPartyServerErrors.length,0,`first-party 5xx responses detected: ${JSON.stringify(firstPartyServerErrors)}`);
           }finally{
             const result=await cleanup();
             console.log('cleanup',JSON.stringify(result));
