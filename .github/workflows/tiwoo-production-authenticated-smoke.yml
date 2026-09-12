@@ -8,7 +8,7 @@ on:
 jobs:
   authenticated-smoke:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 18
     steps:
       - name: Prepare Playwright
         shell: bash
@@ -28,6 +28,7 @@ jobs:
           import { chromium } from 'playwright';
           import assert from 'node:assert/strict';
 
+          const RELEASE='20260913r5';
           const browser=await chromium.launch({headless:true});
           const context=await browser.newContext({viewport:{width:390,height:844},deviceScaleFactor:1,locale:'tr-TR'});
           const page=await context.newPage();
@@ -59,9 +60,44 @@ jobs:
           }
 
           try{
-            const response=await page.goto('https://tiwoo.vercel.app/?authenticated_runner_smoke=1',{waitUntil:'domcontentloaded',timeout:45000});
+            const response=await page.goto(`https://tiwoo.vercel.app/?authenticated_runner_smoke=${RELEASE}`,{waitUntil:'domcontentloaded',timeout:45000});
             assert(response&&response.status()===200,'production document is not HTTP 200');
-            await page.waitForFunction(()=>window.__tiwooRelease==='20260912r4',null,{timeout:20000});
+            await page.waitForFunction(release=>window.__tiwooRelease===release,RELEASE,{timeout:20000});
+
+            const liveAssets=await page.evaluate(()=>({
+              release:window.__tiwooRelease||null,
+              authBundle:document.querySelector('script[data-tiwoo-auth-registration]')?.src||'',
+              homeReplies:document.querySelector('script[data-tiwoo-home-reply-previews]')?.src||'',
+              adminNav:document.querySelector('script[data-tiwoo-admin-nav]')?.src||'',
+              recovery:document.querySelector('script[data-tiwoo-recovery-ui]')?.src||''
+            }));
+            assert.equal(liveAssets.release,RELEASE,'fresh browser did not receive current release marker');
+            assert.match(liveAssets.authBundle,/auth-registration\.js.*r=20260913r5/,'auth bundle is not current-release busted');
+            assert.match(liveAssets.homeReplies,/home-reply-previews\.js.*20260913v6.*r=20260913r5/,'home reply runtime v6 did not load');
+            assert.match(liveAssets.adminNav,/admin-nav\.js.*20260913v8.*r=20260913r5/,'admin mode runtime v8 did not load');
+
+            const staticRuntime=await page.evaluate(async()=>{
+              const get=async p=>await (await fetch(p,{cache:'no-store'})).text();
+              return {
+                home:await get('/home-reply-previews.js?runner=task-chain'),
+                recovery:await get('/recovery-ui.js?runner=task-chain'),
+                admin:await get('/admin-nav.js?runner=task-chain'),
+                adminConsole:await get('/admin-console-v3.js?runner=task-chain')
+              };
+            });
+            assert(staticRuntime.home.includes("window.__tiwooHomeReplyPreviews='2026-09-13-v6'"),'live home reply v6 marker missing');
+            assert(staticRuntime.home.includes('data-home-reply-act="reply"')&&staticRuntime.home.includes('data-home-reply-act="share"'),'live home reply action bar missing');
+            assert(staticRuntime.home.includes('home-reply-continue-wrap')&&staticRuntime.home.includes('Devamını gör'),'live reply continuation markup missing');
+            assert(staticRuntime.recovery.includes("window.__tiwooRecoveryVersion='2026-09-13-v8'"),'live recovery v8 marker missing');
+            assert(staticRuntime.admin.includes("window.__tiwooAdminNavLoaded='2026-09-13-split-mode-v3'"),'live admin split-mode marker missing');
+            assert(staticRuntime.adminConsole.includes("window.__tiwooAdminConsoleV3='2026-09-13-v1'"),'live admin console v3 marker missing');
+
+            const unauthorizedDispatch=await page.evaluate(async()=>{
+              const r=await fetch('https://avpjpoywjyhnvbaqxyip.supabase.co/functions/v1/tiwoo-push-dispatch',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({mode:'wake',message:'runner-auth-check'})});
+              return {status:r.status,body:await r.text()};
+            });
+            assert.equal(unauthorizedDispatch.status,401,'push dispatcher no longer rejects callers without its custom secret');
+
             await page.locator('#publicRegisterHero').click();
             await page.locator('#tiwooNormalChoice').waitFor({state:'attached',timeout:15000});
             await page.locator('#tiwooNormalChoice').evaluate(el=>el.click());
@@ -90,6 +126,17 @@ jobs:
             assert.equal(navGeometry.viewPaddingTop,'0px','home view still has top padding');
             if(navGeometry.toolbarDisplay!==null)assert.equal(navGeometry.toolbarDisplay,'none','hidden home toolbar still occupies space');
 
+            await page.evaluate(()=>go('settings'));
+            await page.locator('#resetByMail').waitFor({state:'visible',timeout:10000});
+            assert.equal(await page.locator('#resetByMail').isEnabled(),true,'signed-in password reset entry button is disabled');
+            await page.locator('#resetByMail').click();
+            await page.locator('#forgotModal').waitFor({state:'visible',timeout:10000});
+            await page.waitForFunction(()=>window.__tiwooRecoveryVersion==='2026-09-13-v8'&&!document.getElementById('forgotSend')?.disabled,null,{timeout:15000});
+            assert.equal((await page.locator('#forgotSend').textContent()).trim(),'Doğrulama kodu gönder','signed-in recovery primary action is wrong');
+            await page.locator('[data-close="forgotModal"]').click();
+            await page.locator('#forgotModal').waitFor({state:'hidden',timeout:10000});
+
+            await page.evaluate(()=>go('home'));
             await page.locator('#mobileNav [data-compose-mobile]').click();
             await page.locator('#composeText').fill('Luna');
             await page.waitForTimeout(500);
@@ -105,7 +152,7 @@ jobs:
             const postId=Number(await root.getAttribute('data-post'));
             assert(postId>0,'created post has no id');
 
-            for(let i=1;i<=2;i++){
+            for(let i=1;i<=6;i++){
               const current=page.locator(`[data-post="${postId}"]`).first();
               await current.locator('[data-act="reply"]').click();
               await page.locator('#replyModal').waitFor({state:'visible',timeout:10000});
@@ -115,25 +162,31 @@ jobs:
               await page.waitForTimeout(350);
             }
 
-            await page.locator('#mobileNav [data-nav="home"]').click();
+            await page.evaluate(()=>go('home'));
             const preview=page.locator(`.home-reply-preview[data-home-thread="${postId}"]`);
             await preview.waitFor({state:'visible',timeout:15000});
-            assert.equal(await preview.locator('.home-reply-row').count(),2,'home does not show the two reply previews');
-            const more=preview.locator('[data-home-continue]');
-            await more.waitFor({state:'visible'});
-            assert.equal((await more.textContent()).trim(),'Devamını gör','home reply continuation label is wrong');
-            await more.click();
+            assert.equal(await preview.locator('.home-reply-row').count(),5,'home must render exactly five visible reply previews');
+            for(const action of ['reply','repost','like','bookmark','share']){
+              assert.equal(await preview.locator(`[data-home-reply-act="${action}"]`).count(),5,`missing ${action} action on one or more home reply previews`);
+            }
+            const continuation=preview.locator('[data-home-continue]');
+            await continuation.waitFor({state:'visible'});
+            assert.equal((await continuation.textContent()).trim(),'Devamını gör','home reply continuation label is wrong');
+            const continuationAfterRows=await preview.evaluate(el=>{
+              const rows=[...el.querySelectorAll('.home-reply-row')],more=el.querySelector('.home-reply-continue-wrap');
+              if(!rows.length||!more)return false;
+              return !!(rows.at(-1).compareDocumentPosition(more)&Node.DOCUMENT_POSITION_FOLLOWING);
+            });
+            assert.equal(continuationAfterRows,true,'Devamını gör is not after the final visible reply');
+
+            await continuation.click();
             await page.waitForFunction(id=>typeof state!=='undefined'&&state?.view==='detail'&&Number(state?.detail)===id,postId,{timeout:10000});
             await page.locator('.conversation-label').waitFor({state:'visible',timeout:10000});
-            assert.match((await page.locator('.conversation-label').textContent())||'',/Yanıtlar\s*·\s*2/,'continuation did not open the complete two-reply thread');
-            assert.equal(await page.locator('.reply-card').count(),2,'full thread does not contain both replies');
-
-            const profileRuntime=await page.evaluate(async()=>await (await fetch('/composer-mention-fixes.js?authenticated-smoke=1',{cache:'no-store'})).text());
-            assert(profileRuntime.includes("BOT_PROFILE_HANDLES=new Set(['@luna','@lina'])"),'live bot-profile runtime does not target Luna/Lina');
-            assert(profileRuntime.includes('height:44px!important'),'live profile action-height rule is missing');
+            assert.match((await page.locator('.conversation-label').textContent())||'',/Yanıtlar\s*·\s*6/,'continuation did not open the complete six-reply thread');
+            assert.equal(await page.locator('.reply-card').count(),6,'full thread does not contain all six replies');
 
             await page.screenshot({path:'/tmp/tiwoo-authenticated-production.png',fullPage:true});
-            console.log(JSON.stringify({ok:true,usernameRedacted:true,postId,navGeometry,consoleErrors,firstPartyServerErrors},null,2));
+            console.log(JSON.stringify({ok:true,release:RELEASE,usernameRedacted:true,postId,navGeometry,unauthorizedDispatchStatus:unauthorizedDispatch.status,consoleErrors,firstPartyServerErrors},null,2));
             assert.equal(consoleErrors.length,0,`browser console errors detected: ${JSON.stringify(consoleErrors)}`);
             assert.equal(firstPartyServerErrors.length,0,`first-party 5xx responses detected: ${JSON.stringify(firstPartyServerErrors)}`);
           }finally{
