@@ -4,20 +4,105 @@ on:
     paths:
       - .github/workflows/tiwoo-production-mobile-smoke.yml
   workflow_dispatch:
+
 jobs:
   smoke:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 12
     steps:
-      - name: Verify production mobile navigation
+      - name: Prepare Chromium smoke runner
         shell: bash
         run: |
           set -euo pipefail
-          curl -fsSL --retry 4 --retry-delay 2 https://tiwoo.vercel.app/auth-registration.js -o /tmp/boot.js
-          curl -fsSL --retry 4 --retry-delay 2 https://tiwoo.vercel.app/mobile-v2.js -o /tmp/mobile.js
-          grep -Fq '/mobile-v2.js?v=20260912v2' /tmp/boot.js
-          ! grep -Fq '/mobile-friends-nav.js' /tmp/boot.js
-          ! grep -Fq 'data-tiwoo-mobile-friends-nav' /tmp/boot.js
-          grep -Fq "['home','friends','compose','notifications','profile']" /tmp/mobile.js
-          grep -Fq "const extraItems=[['bookmarks','bookmark','Yer İşaretleri'],['settings','settings','Ayarlar']]" /tmp/mobile.js
-          echo 'Production mobile navigation smoke test passed.'
+          mkdir -p /tmp/tiwoo-smoke
+          cd /tmp/tiwoo-smoke
+          npm init -y >/dev/null
+          npm install --no-audit --no-fund playwright@1.55.0
+          npx playwright install --with-deps chromium
+
+      - name: Test live Tiwoo in real Chromium
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat >/tmp/tiwoo-smoke/test.mjs <<'EOF'
+          import { chromium } from 'playwright';
+          import assert from 'node:assert/strict';
+
+          const browser = await chromium.launch({headless:true});
+          const context = await browser.newContext({
+            viewport:{width:390,height:844},
+            deviceScaleFactor:1,
+            locale:'tr-TR'
+          });
+          const page = await context.newPage();
+          const consoleErrors=[];
+          page.on('console',msg=>{ if(msg.type()==='error') consoleErrors.push(msg.text()); });
+          page.on('pageerror',err=>consoleErrors.push(String(err)));
+
+          const response = await page.goto('https://tiwoo.vercel.app/?public_runner_smoke=20260912r3',{
+            waitUntil:'domcontentloaded',timeout:45000
+          });
+          assert(response,'production returned no document response');
+          assert.equal(response.status(),200,'production document is not HTTP 200');
+
+          await page.waitForFunction(()=>window.__tiwooRelease==='20260912r3',null,{timeout:20000});
+          await page.waitForTimeout(4500);
+
+          const live = await page.evaluate(()=>({
+            release:window.__tiwooRelease||null,
+            bootPhase:window.__tiwooBootPhase||null,
+            title:document.title,
+            scripts:[...document.scripts].map(x=>x.src).filter(Boolean),
+            links:[...document.querySelectorAll('link[rel="stylesheet"]')].map(x=>x.href),
+            authBundle:document.querySelector('script[data-tiwoo-auth-registration]')?.src||'',
+            homeReplies:document.querySelector('script[data-tiwoo-home-reply-previews]')?.src||'',
+            notifications:document.querySelector('script[data-tiwoo-notification-simple]')?.src||'',
+            adminNav:document.querySelector('script[data-tiwoo-admin-nav]')?.src||'',
+            composerMentions:document.querySelector('script[data-tiwoo-composer-mention-fix]')?.src||'',
+            aiMention:document.querySelector('script[data-tiwoo-ai-mention]')?.src||'',
+            mobileSpacing:document.querySelector('link[data-tiwoo-mobile-spacing-fixes]')?.href||''
+          }));
+
+          assert.equal(live.release,'20260912r3','fresh browser did not receive current release marker');
+          assert.match(live.authBundle,/auth-registration\.js.*r=20260912r3/,'auth feature bundle is not release-busted');
+          assert.match(live.homeReplies,/home-reply-previews\.js.*20260912v4.*r=20260912r3/,'five-reply runtime did not load');
+          assert.match(live.notifications,/notification-simple\.js.*r=20260912r3/,'notification runtime did not load');
+          assert.match(live.adminNav,/admin-nav\.js.*r=20260912r3/,'admin mode runtime did not load');
+          assert.match(live.composerMentions,/composer-mention-fixes\.js.*r=20260912r3/,'mention/profile runtime did not load');
+          assert.match(live.aiMention,/tiwoo-ai-mention\.js.*20260912v27.*r=20260912r3/,'AI UI runtime did not load');
+          assert.match(live.mobileSpacing,/mobile-spacing-fixes\.css.*r=20260912r3/,'mobile spacing stylesheet did not load');
+
+          const sources = await page.evaluate(async()=>{
+            const get=async path=>await (await fetch(path,{cache:'no-store'})).text();
+            return {
+              home:await get('/home-reply-previews.js?r=runner'),
+              mobile:await get('/mobile-spacing-fixes.css?r=runner'),
+              admin:await get('/admin-nav.js?r=runner'),
+              notify:await get('/notification-simple.js?r=runner'),
+              composer:await get('/composer-mention-fixes.js?r=runner')
+            };
+          });
+          assert(sources.home.includes('const MAX_REPLIES=5'),'live home runtime is missing MAX_REPLIES=5');
+          assert(sources.home.includes('Diğer yanıtları gör'),'live home runtime is missing remaining-replies button');
+          assert(sources.mobile.includes('bottom:0!important'),'live mobile nav is not flush to bottom');
+          assert(sources.mobile.includes('padding-top:0!important'),'live home top-gap fix is missing');
+          assert(sources.admin.includes('data-admin-mode-toggle'),'live admin mode switch is missing');
+          assert(sources.notify.includes('Okunmadı')&&sources.notify.includes('Okundu'),'live notification read-state UI is missing');
+          assert(sources.composer.includes("BOT_PROFILE_HANDLES=new Set(['@luna','@lina'])"),'live bot-profile follow hiding runtime is missing');
+          assert(sources.composer.includes('height:44px!important'),'live equal profile action heights are missing');
+
+          await page.screenshot({path:'/tmp/tiwoo-production-mobile.png',fullPage:true});
+          console.log(JSON.stringify({ok:true,...live,consoleErrors},null,2));
+          await browser.close();
+          EOF
+          cd /tmp/tiwoo-smoke
+          node test.mjs
+
+      - name: Upload live-browser screenshot
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tiwoo-production-mobile-browser
+          path: /tmp/tiwoo-production-mobile.png
+          if-no-files-found: ignore
+          retention-days: 1
