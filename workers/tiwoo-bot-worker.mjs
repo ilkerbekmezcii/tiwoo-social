@@ -3,9 +3,11 @@ import http from 'node:http';
 const BOT_HANDLE=String(process.env.BOT_HANDLE||'').trim().toLowerCase();
 const SUPABASE_URL=String(process.env.SUPABASE_URL||'').replace(/\/$/,'');
 const WORKER_SECRET=String(process.env.TIWOO_AI_WORKER_SECRET||'').trim();
-const POLL_MS=Math.max(2000,Math.min(Number(process.env.WORKER_POLL_MS)||5000,60000));
+const POLL_MS=Math.max(5000,Math.min(Number(process.env.WORKER_POLL_MS)||15000,60000));
 const PORT=Math.max(1,Number(process.env.PORT)||10000);
-const INSTANCE_ID=String(process.env.RENDER_INSTANCE_ID||process.env.HOSTNAME||crypto.randomUUID()).slice(0,120);
+const MAX_RUNTIME_MS=Math.max(0,Number(process.env.WORKER_MAX_RUNTIME_MS)||0);
+const HEALTH_SERVER=String(process.env.WORKER_HEALTH_SERVER||'1')!=='0';
+const INSTANCE_ID=String(process.env.GITHUB_RUN_ID?`github:${process.env.GITHUB_RUN_ID}:${process.env.GITHUB_RUN_ATTEMPT||'1'}:${BOT_HANDLE}`:(process.env.RENDER_INSTANCE_ID||process.env.HOSTNAME||crypto.randomUUID())).slice(0,120);
 
 if(!['@luna','@lina'].includes(BOT_HANDLE)) throw new Error('BOT_HANDLE must be @luna or @lina');
 if(!SUPABASE_URL) throw new Error('SUPABASE_URL is required');
@@ -16,6 +18,7 @@ let running=false;
 let lastOkAt=0;
 let lastResult='starting';
 let failures=0;
+const startedAt=Date.now();
 
 const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 const compact=(value,max=240)=>String(value??'').replace(/\s+/g,' ').trim().slice(0,max);
@@ -46,25 +49,39 @@ async function cycle(){
 }
 
 async function loop(){
-  console.log('worker_started',BOT_HANDLE,{pollMs:POLL_MS,instanceId:INSTANCE_ID});
+  console.log('worker_started',BOT_HANDLE,{pollMs:POLL_MS,instanceId:INSTANCE_ID,maxRuntimeMs:MAX_RUNTIME_MS||null});
   while(!stopped){
+    if(MAX_RUNTIME_MS&&Date.now()-startedAt>=MAX_RUNTIME_MS){
+      console.log('worker_runtime_complete',BOT_HANDLE);
+      stopped=true;
+      break;
+    }
     await cycle();
-    const backoff=failures?Math.min(POLL_MS*Math.max(1,failures),30000):POLL_MS;
+    const backoff=failures?Math.min(POLL_MS*Math.max(1,failures),60000):POLL_MS;
     await sleep(backoff);
   }
 }
 
-const server=http.createServer((req,res)=>{
-  if(req.url==='/healthz'||req.url==='/'){
-    const healthy=lastOkAt===0||Date.now()-lastOkAt<Math.max(POLL_MS*12,120000);
-    res.writeHead(healthy?200:503,{'content-type':'application/json','cache-control':'no-store'});
-    res.end(JSON.stringify({ok:healthy,botHandle:BOT_HANDLE,running,lastOkAt:lastOkAt?new Date(lastOkAt).toISOString():null,lastResult}));
-    return;
-  }
-  res.writeHead(404,{'content-type':'application/json'});
-  res.end(JSON.stringify({ok:false,error:'not_found'}));
-});
+let server=null;
+if(HEALTH_SERVER){
+  server=http.createServer((req,res)=>{
+    if(req.url==='/healthz'||req.url==='/'){
+      const healthy=lastOkAt===0||Date.now()-lastOkAt<Math.max(POLL_MS*12,120000);
+      res.writeHead(healthy?200:503,{'content-type':'application/json','cache-control':'no-store'});
+      res.end(JSON.stringify({ok:healthy,botHandle:BOT_HANDLE,running,lastOkAt:lastOkAt?new Date(lastOkAt).toISOString():null,lastResult}));
+      return;
+    }
+    res.writeHead(404,{'content-type':'application/json'});
+    res.end(JSON.stringify({ok:false,error:'not_found'}));
+  });
+  server.listen(PORT,'0.0.0.0',()=>console.log('health_server_listening',BOT_HANDLE,PORT));
+}
 
-server.listen(PORT,'0.0.0.0',()=>console.log('health_server_listening',BOT_HANDLE,PORT));
-for(const signal of ['SIGTERM','SIGINT'])process.on(signal,()=>{stopped=true;server.close(()=>process.exit(0));setTimeout(()=>process.exit(0),5000).unref();});
-loop().catch(error=>{console.error('worker_fatal',compact(error?.stack||error,1000));process.exit(1);});
+function shutdown(){
+  stopped=true;
+  if(server)server.close(()=>process.exit(0));
+  else process.exit(0);
+  setTimeout(()=>process.exit(0),5000).unref();
+}
+for(const signal of ['SIGTERM','SIGINT'])process.on(signal,shutdown);
+loop().then(()=>shutdown()).catch(error=>{console.error('worker_fatal',compact(error?.stack||error,1000));process.exit(1);});
