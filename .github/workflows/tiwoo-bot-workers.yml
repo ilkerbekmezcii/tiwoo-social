@@ -1,0 +1,58 @@
+name: Tiwoo Luna Lina workers
+
+on:
+  schedule:
+    - cron: '7 */5 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  luna:
+    name: Luna worker
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    concurrency:
+      group: tiwoo-luna-worker
+      cancel-in-progress: false
+    env:
+      BOT_HANDLE: '@luna'
+      SUPABASE_URL: 'https://avpjpoywjyhnvbaqxyip.supabase.co'
+      TIWOO_AI_WORKER_SECRET: ${{ secrets.TIWOO_AI_WORKER_SECRET }}
+      WORKER_POLL_MS: '15000'
+      WORKER_MAX_RUNTIME_MS: '19800000'
+      WORKER_HEALTH_SERVER: '0'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate secret presence
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${TIWOO_AI_WORKER_SECRET:-}" || { echo 'TIWOO_AI_WORKER_SECRET repository secret is missing'; exit 1; }
+      - name: Run Luna worker
+        run: node workers/tiwoo-bot-worker.mjs
+
+  lina:
+    name: Lina worker
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    concurrency:
+      group: tiwoo-lina-worker
+      cancel-in-progress: false
+    env:
+      BOT_HANDLE: '@lina'
+      SUPABASE_URL: 'https://avpjpoywjyhnvbaqxyip.supabase.co'
+      TIWOO_AI_WORKER_SECRET: ${{ secrets.TIWOO_AI_WORKER_SECRET }}
+      WORKER_POLL_MS: '15000'
+      WORKER_MAX_RUNTIME_MS: '19800000'
+      WORKER_HEALTH_SERVER: '0'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate secret presence
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${TIWOO_AI_WORKER_SECRET:-}" || { echo 'TIWOO_AI_WORKER_SECRET repository secret is missing'; exit 1; }
+      - name: Run Lina worker
+        run: node workers/tiwoo-bot-worker.mjs
