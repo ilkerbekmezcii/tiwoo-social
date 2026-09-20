@@ -60,6 +60,9 @@ public final class IletNotifications {
     public Notification buildServiceNotification(){
         return builder(CH_SERVICE)
             .setSmallIcon(android.R.drawable.stat_notify_chat)
+            .setContentTitle("İLET")
+            .setContentText(" ")
+            .setContentIntent(mainIntent())
             .setOngoing(true)
             .setCategory(Notification.CATEGORY_SERVICE)
             .setPriority(Notification.PRIORITY_MIN)
