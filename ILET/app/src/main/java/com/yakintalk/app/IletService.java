@@ -29,7 +29,7 @@ public final class IletService extends Service {
     @Override public int onStartCommand(Intent i,int flags,int id){
         try {
             IletRuntime.get(this).start();
-            return START_STICKY;
+            return START_NOT_STICKY;
         } catch (Throwable t) {
             stopSelf();
             return START_NOT_STICKY;
