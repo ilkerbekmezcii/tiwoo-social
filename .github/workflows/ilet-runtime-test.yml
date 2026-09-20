@@ -58,7 +58,7 @@ jobs:
           emulator-options: -no-window -no-snapshot -noaudio -no-boot-anim -gpu swiftshader_indirect
           disable-animations: true
           script: |
-            set -euo pipefail
+            set -eu
             APK="ILET/app/build/outputs/apk/debug/app-debug.apk"
             adb install -r "$APK"
 
