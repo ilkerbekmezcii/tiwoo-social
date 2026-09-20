@@ -7,6 +7,7 @@ on:
     paths:
       - 'ILET/**'
       - '.github/workflows/ilet-runtime-test.yml'
+      - '.github/scripts/ilet-runtime-test.sh'
 
 permissions:
   contents: read
