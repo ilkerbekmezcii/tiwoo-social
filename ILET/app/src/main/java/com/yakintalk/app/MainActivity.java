@@ -51,6 +51,7 @@ public final class MainActivity extends Activity implements WifiDirectController
     private String chatEndpoint;
     private String callEndpoint;
     private boolean callActive;
+    private boolean updateCheckedThisSession;
 
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state);
@@ -78,6 +79,11 @@ public final class MainActivity extends Activity implements WifiDirectController
     @Override protected void onResume() {
         super.onResume();
         if (hasWifiPermission()) IletService.start(this);
+        if (AutoUpdater.resumePendingInstall(this)) return;
+        if (!updateCheckedThisSession) {
+            updateCheckedThisSession = true;
+            AutoUpdater.check(this, false);
+        }
     }
 
     @Override protected void onStop() {
@@ -164,9 +170,17 @@ public final class MainActivity extends Activity implements WifiDirectController
         titles.addView(subtitle);
         header.addView(titles,new LinearLayout.LayoutParams(0,ViewGroup.LayoutParams.WRAP_CONTENT,1));
 
-        Button profile = button(initials(runtime.getDisplayName()),false);
+        TextView update = circleAction("↻");
+        update.setContentDescription("Güncellemeleri kontrol et");
+        update.setOnClickListener(v -> AutoUpdater.check(this, true));
+        LinearLayout.LayoutParams updateLp = new LinearLayout.LayoutParams(dp(44),dp(44));
+        updateLp.setMargins(0,0,dp(8),0);
+        header.addView(update,updateLp);
+
+        TextView profile = profileAvatar(initials(runtime.getDisplayName()));
+        profile.setContentDescription("Görünen adı değiştir");
         profile.setOnClickListener(v -> editName());
-        header.addView(profile,new LinearLayout.LayoutParams(dp(48),dp(48)));
+        header.addView(profile,new LinearLayout.LayoutParams(dp(54),dp(54)));
         root.addView(header);
 
         LinearLayout hero = new LinearLayout(this);
@@ -554,6 +568,26 @@ public final class MainActivity extends Activity implements WifiDirectController
         LinearLayout.LayoutParams p = new LinearLayout.LayoutParams(-1,-2);
         p.setMargins(0,dp(vertical),0,dp(vertical));
         return p;
+    }
+
+    private TextView profileAvatar(String label) {
+        TextView v = text(label,14,ACCENT_DARK,true);
+        v.setGravity(Gravity.CENTER);
+        v.setIncludeFontPadding(false);
+        v.setSingleLine(true);
+        v.setPadding(0,0,0,0);
+        v.setBackground(stroked(ACCENT_SOFT,Color.rgb(215,216,250),30));
+        return v;
+    }
+
+    private TextView circleAction(String label) {
+        TextView v = text(label,22,ACCENT_DARK,true);
+        v.setGravity(Gravity.CENTER);
+        v.setIncludeFontPadding(false);
+        v.setSingleLine(true);
+        v.setPadding(0,0,0,0);
+        v.setBackground(stroked(SURFACE,BORDER,30));
+        return v;
     }
 
     private Button button(String label,boolean primary) {
