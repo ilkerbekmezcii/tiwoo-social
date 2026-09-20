@@ -167,6 +167,7 @@ public final class WifiDirectController {
         running = true;
         registerReceiver();
         serviceRequestReady = false;
+        startListeningMode();
         setupServiceDiscovery();
         listener.onStatus("Yalnızca Wi‑Fi ile yakındaki cihazlar aranıyor");
     }
@@ -184,6 +185,9 @@ public final class WifiDirectController {
             receiverRegistered = false;
         }
         if (manager != null && channel != null) {
+            if (Build.VERSION.SDK_INT >= 33) {
+                try { manager.stopListening(channel, null); } catch (Exception ignored) {}
+            }
             try { manager.clearLocalServices(channel, null); } catch (Exception ignored) {}
             try { manager.clearServiceRequests(channel, null); } catch (Exception ignored) {}
         }
@@ -229,6 +233,24 @@ public final class WifiDirectController {
             owner.send(type, localStableId, destination, payload);
         } else {
             listener.onStatus("Wi‑Fi veri kanalı henüz hazır değil");
+        }
+    }
+
+    @SuppressLint("MissingPermission")
+    private void startListeningMode() {
+        if (!running || manager == null || channel == null || !ensureWifiPermission()) return;
+        if (Build.VERSION.SDK_INT < 33) return;
+        try {
+            manager.startListening(channel, new WifiP2pManager.ActionListener() {
+                @Override public void onSuccess() {}
+                @Override public void onFailure(int reason) {
+                    if (reason != WifiP2pManager.BUSY) {
+                        listener.onStatus("Wi‑Fi Direct dinleme başlatılamadı: " + reason);
+                    }
+                }
+            });
+        } catch (SecurityException e) {
+            listener.onStatus("Yakındaki Wi‑Fi cihaz izni gerekli");
         }
     }
 
@@ -386,7 +408,11 @@ public final class WifiDirectController {
             if (WifiP2pManager.WIFI_P2P_STATE_CHANGED_ACTION.equals(action)) {
                 int state = intent.getIntExtra(WifiP2pManager.EXTRA_WIFI_STATE, -1);
                 if (state != WifiP2pManager.WIFI_P2P_STATE_ENABLED) {
+                    serviceRequestReady = false;
                     listener.onStatus("Wi‑Fi Direct kapalı");
+                } else if (running) {
+                    startListeningMode();
+                    if (!serviceRequestReady) setupServiceDiscovery();
                 }
             } else if (WifiP2pManager.WIFI_P2P_CONNECTION_CHANGED_ACTION.equals(action)) {
                 NetworkInfo ni = intent.getParcelableExtra(WifiP2pManager.EXTRA_NETWORK_INFO);
