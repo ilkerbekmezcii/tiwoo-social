@@ -276,6 +276,7 @@ public final class AutoUpdater {
     }
 
     private static boolean isWifiConnected(Context context) {
+        try {
         ConnectivityManager cm =
                 (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
         if (cm == null) return false;
@@ -292,5 +293,8 @@ public final class AutoUpdater {
         return info != null &&
                 info.isConnected() &&
                 info.getType() == ConnectivityManager.TYPE_WIFI;
+        } catch (SecurityException e) {
+            return false;
+        }
     }
 }
