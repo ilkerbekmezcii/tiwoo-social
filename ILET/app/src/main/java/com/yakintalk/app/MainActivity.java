@@ -102,6 +102,7 @@ public final class MainActivity extends Activity implements WifiDirectController
         super.onDestroy();
     }
 
+    @android.annotation.SuppressLint("GestureBackNavigation")
     @Override public void onBackPressed() {
         if (callEndpoint != null) { stopCall(true); return; }
         if (chatEndpoint != null) { chatEndpoint = null; renderHome(); return; }
@@ -115,6 +116,7 @@ public final class MainActivity extends Activity implements WifiDirectController
             wanted.add(Manifest.permission.POST_NOTIFICATIONS);
             wanted.add(Manifest.permission.NEARBY_WIFI_DEVICES);
         } else {
+            wanted.add(Manifest.permission.ACCESS_COARSE_LOCATION);
             wanted.add(Manifest.permission.ACCESS_FINE_LOCATION);
         }
 
