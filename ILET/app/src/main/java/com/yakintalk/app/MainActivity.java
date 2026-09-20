@@ -3,12 +3,15 @@ package com.yakintalk.app;
 import android.Manifest;
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.location.LocationManager;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Build;
 import android.os.Bundle;
+import android.provider.Settings;
 import android.text.InputType;
 import android.view.Gravity;
 import android.view.View;
@@ -52,6 +55,7 @@ public final class MainActivity extends Activity implements WifiDirectController
     private String callEndpoint;
     private boolean callActive;
     private boolean updateCheckedThisSession;
+    private boolean locationPromptShown;
 
     @Override protected void onCreate(Bundle state) {
         super.onCreate(state);
@@ -74,10 +78,7 @@ public final class MainActivity extends Activity implements WifiDirectController
     @Override protected void onStart() {
         super.onStart();
         runtime.attachUi(this);
-        if (hasWifiPermission()) {
-            runtime.start();
-            status = "Yakındaki cihazlar yalnızca Wi‑Fi ile aranıyor";
-        }
+        maybeStartRuntime();
     }
 
     @Override protected void onResume() {
@@ -127,6 +128,47 @@ public final class MainActivity extends Activity implements WifiDirectController
         if (!missing.isEmpty()) requestPermissions(missing.toArray(new String[0]), PERMISSION_REQUEST);
     }
 
+    private boolean isLocationServicesEnabled() {
+        LocationManager lm = (LocationManager) getSystemService(LOCATION_SERVICE);
+        if (lm == null) return false;
+        if (Build.VERSION.SDK_INT >= 28) return lm.isLocationEnabled();
+        try {
+            return lm.isProviderEnabled(LocationManager.GPS_PROVIDER)
+                    || lm.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private void maybeStartRuntime() {
+        if (!hasWifiPermission()) {
+            status = "Yakındaki Wi‑Fi cihaz izni gerekli";
+            return;
+        }
+
+        if (!isLocationServicesEnabled()) {
+            status = "Wi‑Fi Direct taraması için telefonun Konum hizmetini açın";
+            if (!locationPromptShown && !isFinishing()) {
+                locationPromptShown = true;
+                new AlertDialog.Builder(this)
+                        .setTitle("Konum hizmeti gerekli")
+                        .setMessage("Android, Wi‑Fi Direct cihaz keşfi için telefonun Konum hizmetinin açık olmasını zorunlu tutuyor. İLET fiziksel konumunuzu kullanmaz.")
+                        .setNegativeButton("Kapat", null)
+                        .setPositiveButton("Ayarları aç", (d, w) -> {
+                            try {
+                                startActivity(new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS));
+                            } catch (Exception ignored) {}
+                        })
+                        .show();
+            }
+            return;
+        }
+
+        locationPromptShown = false;
+        status = "Yakındaki cihazlar yalnızca Wi‑Fi ile aranıyor";
+        runtime.start();
+    }
+
     private boolean hasWifiPermission() {
         if (Build.VERSION.SDK_INT >= 33) {
             return checkSelfPermission(Manifest.permission.NEARBY_WIFI_DEVICES) == PackageManager.PERMISSION_GRANTED;
@@ -138,12 +180,7 @@ public final class MainActivity extends Activity implements WifiDirectController
         super.onRequestPermissionsResult(code, permissions, results);
         if (code != PERMISSION_REQUEST) return;
 
-        if (hasWifiPermission()) {
-            status = "Yakındaki cihazlar yalnızca Wi‑Fi ile aranıyor";
-            runtime.start();
-        } else {
-            status = "Yakındaki Wi‑Fi cihaz izni gerekli";
-        }
+        maybeStartRuntime();
         renderCurrent();
     }
 
