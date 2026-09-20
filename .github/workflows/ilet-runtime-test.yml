@@ -69,12 +69,20 @@ jobs:
             adb shell am start -W -n com.yakintalk.app/.MainActivity
             sleep 8
 
-            PID=$(adb shell pidof com.yakintalk.app | tr -d '\r')
-            test -n "$PID"
+            PID=$(adb shell pidof com.yakintalk.app 2>/dev/null | tr -d '\r' || true)
+            adb logcat -d > /tmp/ilet-logcat.txt
+            if [ -z "$PID" ]; then
+              echo "FAIL: ILET process exited after launch"
+              grep -E -A40 -B10 "FATAL EXCEPTION|Process: com\.yakintalk\.app|AndroidRuntime|SecurityException|RuntimeException|IllegalStateException|UnsupportedOperationException" /tmp/ilet-logcat.txt || tail -n 500 /tmp/ilet-logcat.txt
+              exit 1
+            fi
             echo "PASS: ILET process alive after launch: $PID"
 
-            adb logcat -d > /tmp/ilet-logcat.txt
-            ! grep -E "FATAL EXCEPTION|Process: com\.yakintalk\.app.*has died|AndroidRuntime.*com\.yakintalk\.app" /tmp/ilet-logcat.txt
+            if grep -E "FATAL EXCEPTION|Process: com\.yakintalk\.app.*has died|AndroidRuntime.*com\.yakintalk\.app" /tmp/ilet-logcat.txt; then
+              echo "FAIL: fatal runtime exception detected"
+              grep -E -A40 -B10 "FATAL EXCEPTION|Process: com\.yakintalk\.app|AndroidRuntime" /tmp/ilet-logcat.txt
+              exit 1
+            fi
             echo "PASS: no fatal runtime exception"
 
             adb shell dumpsys package com.yakintalk.app > /tmp/ilet-package.txt
