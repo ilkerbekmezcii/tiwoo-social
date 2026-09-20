@@ -1,9 +1,12 @@
 package com.yakintalk.app;
 
+import android.Manifest;
+import android.annotation.SuppressLint;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.pm.PackageManager;
 import android.net.NetworkInfo;
 import android.net.wifi.WpsInfo;
 import android.net.wifi.p2p.WifiP2pConfig;
@@ -128,6 +131,21 @@ public final class WifiDirectController {
 
     public String getDisplayName() { return displayName; }
 
+    private boolean hasWifiPermission() {
+        if (Build.VERSION.SDK_INT >= 33) {
+            return context.checkSelfPermission(Manifest.permission.NEARBY_WIFI_DEVICES)
+                    == PackageManager.PERMISSION_GRANTED;
+        }
+        return context.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION)
+                == PackageManager.PERMISSION_GRANTED;
+    }
+
+    private boolean ensureWifiPermission() {
+        if (hasWifiPermission()) return true;
+        listener.onStatus("Yakındaki Wi‑Fi cihaz izni gerekli");
+        return false;
+    }
+
     public void setDisplayName(String name) {
         String clean = name == null ? "" : name.trim();
         if (clean.isEmpty()) return;
@@ -144,6 +162,7 @@ public final class WifiDirectController {
             listener.onStatus("Wi‑Fi Direct bu cihazda kullanılamıyor");
             return;
         }
+        if (!ensureWifiPermission()) return;
         running = true;
         registerReceiver();
         setupServiceDiscovery();
@@ -225,7 +244,10 @@ public final class WifiDirectController {
         receiverRegistered = true;
     }
 
+    @SuppressLint("MissingPermission")
     private void setupServiceDiscovery() {
+        if (!ensureWifiPermission()) return;
+        try {
         manager.setDnsSdResponseListeners(channel,
                 (instanceName, registrationType, srcDevice) -> {},
                 (fullDomain, txtRecordMap, srcDevice) -> {
@@ -267,10 +289,15 @@ public final class WifiDirectController {
                 listener.onStatus("Wi‑Fi servis taraması hazırlanamadı: " + reason);
             }
         });
+        } catch (SecurityException e) {
+            listener.onStatus("Yakındaki Wi‑Fi cihaz izni gerekli");
+            running = false;
+        }
     }
 
+    @SuppressLint("MissingPermission")
     private void registerLocalService() {
-        if (manager == null || channel == null) return;
+        if (manager == null || channel == null || !ensureWifiPermission()) return;
         Map<String, String> record = new HashMap<>();
         record.put("id", localStableId);
         record.put("name", displayName);
@@ -278,6 +305,7 @@ public final class WifiDirectController {
         WifiP2pDnsSdServiceInfo service =
                 WifiP2pDnsSdServiceInfo.newInstance(SERVICE_INSTANCE, SERVICE_TYPE, record);
 
+        try {
         manager.clearLocalServices(channel, new WifiP2pManager.ActionListener() {
             @Override public void onSuccess() {
                 manager.addLocalService(channel, service, new WifiP2pManager.ActionListener() {
@@ -289,10 +317,15 @@ public final class WifiDirectController {
             }
             @Override public void onFailure(int reason) {}
         });
+        } catch (SecurityException e) {
+            listener.onStatus("Yakındaki Wi‑Fi cihaz izni gerekli");
+        }
     }
 
+    @SuppressLint("MissingPermission")
     private void discoverServices() {
-        if (!running || manager == null || channel == null) return;
+        if (!running || manager == null || channel == null || !ensureWifiPermission()) return;
+        try {
         manager.discoverServices(channel, new WifiP2pManager.ActionListener() {
             @Override public void onSuccess() {}
             @Override public void onFailure(int reason) {
@@ -301,9 +334,14 @@ public final class WifiDirectController {
                 }
             }
         });
+        } catch (SecurityException e) {
+            listener.onStatus("Yakındaki Wi‑Fi cihaz izni gerekli");
+        }
     }
 
+    @SuppressLint("MissingPermission")
     private synchronized void maybeConnect(String id, WifiP2pDevice device) {
+        if (!ensureWifiPermission()) return;
         Peer peer = peers.get(id);
         if (peer != null && peer.connected) return;
         if (connections.containsKey(id)) return;
@@ -313,6 +351,7 @@ public final class WifiDirectController {
         config.deviceAddress = device.deviceAddress;
         config.wps.setup = WpsInfo.PBC;
 
+        try {
         manager.connect(channel, config, new WifiP2pManager.ActionListener() {
             @Override public void onSuccess() {
                 listener.onStatus("İzole Wi‑Fi bağlantısı kuruluyor");
@@ -321,6 +360,9 @@ public final class WifiDirectController {
                 listener.onStatus("Wi‑Fi bağlantısı kurulamadı: " + reason);
             }
         });
+        } catch (SecurityException e) {
+            listener.onStatus("Yakındaki Wi‑Fi cihaz izni gerekli");
+        }
     }
 
     private final BroadcastReceiver receiver = new BroadcastReceiver() {
@@ -334,7 +376,13 @@ public final class WifiDirectController {
             } else if (WifiP2pManager.WIFI_P2P_CONNECTION_CHANGED_ACTION.equals(action)) {
                 NetworkInfo ni = intent.getParcelableExtra(WifiP2pManager.EXTRA_NETWORK_INFO);
                 if (ni != null && ni.isConnected()) {
-                    manager.requestConnectionInfo(channel, WifiDirectController.this::handleConnectionInfo);
+                    if (ensureWifiPermission()) {
+                        try {
+                            manager.requestConnectionInfo(channel, WifiDirectController.this::handleConnectionInfo);
+                        } catch (SecurityException e) {
+                            listener.onStatus("Yakındaki Wi‑Fi cihaz izni gerekli");
+                        }
+                    }
                 } else {
                     markAllDisconnected();
                     closeServer();
@@ -343,14 +391,19 @@ public final class WifiDirectController {
         }
     };
 
+    @SuppressLint("MissingPermission")
     private void handleConnectionInfo(WifiP2pInfo info) {
         if (!info.groupFormed) return;
         groupOwner = info.isGroupOwner;
         if (groupOwner) {
             startServer();
             listener.onStatus("İzole Wi‑Fi grubu hazır");
-        } else if (info.groupOwnerAddress != null) {
-            manager.requestGroupInfo(channel, group -> connectToOwner(info.groupOwnerAddress, group));
+        } else if (info.groupOwnerAddress != null && ensureWifiPermission()) {
+            try {
+                manager.requestGroupInfo(channel, group -> connectToOwner(info.groupOwnerAddress, group));
+            } catch (SecurityException e) {
+                listener.onStatus("Yakındaki Wi‑Fi cihaz izni gerekli");
+            }
         }
     }
 
