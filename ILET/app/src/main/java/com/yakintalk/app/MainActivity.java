@@ -74,11 +74,14 @@ public final class MainActivity extends Activity implements WifiDirectController
     @Override protected void onStart() {
         super.onStart();
         runtime.attachUi(this);
+        if (hasWifiPermission()) {
+            runtime.start();
+            status = "Yakındaki cihazlar yalnızca Wi‑Fi ile aranıyor";
+        }
     }
 
     @Override protected void onResume() {
         super.onResume();
-        if (hasWifiPermission()) IletService.start(this);
         if (AutoUpdater.resumePendingInstall(this)) return;
         if (!updateCheckedThisSession) {
             updateCheckedThisSession = true;
@@ -87,6 +90,8 @@ public final class MainActivity extends Activity implements WifiDirectController
     }
 
     @Override protected void onStop() {
+        if (callEndpoint != null) stopCall(true);
+        runtime.stop();
         runtime.detachUi(this);
         super.onStop();
     }
@@ -133,7 +138,7 @@ public final class MainActivity extends Activity implements WifiDirectController
 
         if (hasWifiPermission()) {
             status = "Yakındaki cihazlar yalnızca Wi‑Fi ile aranıyor";
-            IletService.start(this);
+            runtime.start();
         } else {
             status = "Yakındaki Wi‑Fi cihaz izni gerekli";
         }
