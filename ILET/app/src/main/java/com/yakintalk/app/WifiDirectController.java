@@ -76,6 +76,7 @@ public final class WifiDirectController {
     private final String localStableId;
     private String displayName;
     private boolean running;
+    private boolean serviceRequestReady;
     private boolean receiverRegistered;
     private boolean groupOwner;
     private Connection ownerConnection;
@@ -165,13 +166,14 @@ public final class WifiDirectController {
         if (!ensureWifiPermission()) return;
         running = true;
         registerReceiver();
+        serviceRequestReady = false;
         setupServiceDiscovery();
-        handler.post(discoveryLoop);
         listener.onStatus("Yalnızca Wi‑Fi ile yakındaki cihazlar aranıyor");
     }
 
     public synchronized void stop() {
         running = false;
+        serviceRequestReady = false;
         handler.removeCallbacks(discoveryLoop);
         closeServer();
         for (Connection c : new ArrayList<>(connections.values())) c.close();
@@ -279,13 +281,20 @@ public final class WifiDirectController {
                 WifiP2pDnsSdServiceRequest request =
                         WifiP2pDnsSdServiceRequest.newInstance(SERVICE_TYPE);
                 manager.addServiceRequest(channel, request, new WifiP2pManager.ActionListener() {
-                    @Override public void onSuccess() { discoverServices(); }
+                    @Override public void onSuccess() {
+                        serviceRequestReady = true;
+                        handler.removeCallbacks(discoveryLoop);
+                        discoverServices();
+                        handler.postDelayed(discoveryLoop, 25000);
+                    }
                     @Override public void onFailure(int reason) {
+                        serviceRequestReady = false;
                         listener.onStatus("Wi‑Fi servis taraması hazırlanamadı: " + reason);
                     }
                 });
             }
             @Override public void onFailure(int reason) {
+                serviceRequestReady = false;
                 listener.onStatus("Wi‑Fi servis taraması hazırlanamadı: " + reason);
             }
         });
@@ -324,12 +333,18 @@ public final class WifiDirectController {
 
     @SuppressLint("MissingPermission")
     private void discoverServices() {
-        if (!running || manager == null || channel == null || !ensureWifiPermission()) return;
+        if (!running || !serviceRequestReady || manager == null || channel == null || !ensureWifiPermission()) return;
         try {
         manager.discoverServices(channel, new WifiP2pManager.ActionListener() {
             @Override public void onSuccess() {}
             @Override public void onFailure(int reason) {
-                if (reason != WifiP2pManager.BUSY) {
+                if (reason == WifiP2pManager.NO_SERVICE_REQUESTS) {
+                    serviceRequestReady = false;
+                    handler.removeCallbacks(discoveryLoop);
+                    handler.postDelayed(() -> {
+                        if (running) setupServiceDiscovery();
+                    }, 1000);
+                } else if (reason != WifiP2pManager.BUSY) {
                     listener.onStatus("Wi‑Fi taraması başlatılamadı: " + reason);
                 }
             }
