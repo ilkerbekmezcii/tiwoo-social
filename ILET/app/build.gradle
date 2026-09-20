@@ -8,8 +8,8 @@ android {
         applicationId 'com.yakintalk.app'
         minSdk 26
         targetSdk 36
-        versionCode 8
-        versionName '0.2.6'
+        versionCode 9
+        versionName '0.2.7'
     }
     buildTypes {
         release {
@@ -22,4 +22,6 @@ android {
         targetCompatibility JavaVersion.VERSION_17
     }
 }
-dependencies {}
+dependencies {
+    implementation 'androidx.core:core:1.15.0'
+}
