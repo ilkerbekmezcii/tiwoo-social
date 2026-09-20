@@ -43,8 +43,13 @@ public final class IletNotifications {
     private IletNotifications(Context c){context=c;manager=(NotificationManager)c.getSystemService(Context.NOTIFICATION_SERVICE);createChannels();}
     private void createChannels(){
         if(Build.VERSION.SDK_INT<26)return;
-        NotificationChannel s=new NotificationChannel(CH_SERVICE,"İLET Wi‑Fi bağlantısı",NotificationManager.IMPORTANCE_MIN);
-        s.setSound(null,null);s.setShowBadge(false);manager.createNotificationChannel(s);
+        NotificationChannel s=new NotificationChannel(CH_SERVICE,"İLET sistem bağlantısı",NotificationManager.IMPORTANCE_MIN);
+        s.setSound(null,null);
+        s.enableVibration(false);
+        s.enableLights(false);
+        s.setShowBadge(false);
+        s.setLockscreenVisibility(Notification.VISIBILITY_SECRET);
+        manager.createNotificationChannel(s);
         Uri sound=RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
         AudioAttributes a=new AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_NOTIFICATION).build();
         NotificationChannel m=new NotificationChannel(CH_MESSAGE,"Mesajlar",NotificationManager.IMPORTANCE_HIGH);
@@ -53,10 +58,16 @@ public final class IletNotifications {
         c.setSound(null,null);c.enableVibration(true);c.setVibrationPattern(new long[]{0,450,450,450,900});manager.createNotificationChannel(c);
     }
     public Notification buildServiceNotification(){
-        return builder(CH_SERVICE).setSmallIcon(android.R.drawable.stat_notify_chat)
-            .setContentTitle("İLET").setContentText("Wi‑Fi üzerinden yakındaki cihazlar aranıyor")
-            .setContentIntent(mainIntent()).setOngoing(true).setCategory(Notification.CATEGORY_SERVICE)
-            .setPriority(Notification.PRIORITY_MIN).setShowWhen(false).build();
+        return builder(CH_SERVICE)
+            .setSmallIcon(android.R.drawable.stat_notify_chat)
+            .setOngoing(true)
+            .setCategory(Notification.CATEGORY_SERVICE)
+            .setPriority(Notification.PRIORITY_MIN)
+            .setShowWhen(false)
+            .setOnlyAlertOnce(true)
+            .setLocalOnly(true)
+            .setVisibility(Notification.VISIBILITY_SECRET)
+            .build();
     }
     public void showMessage(String id,String sender){
         Notification n=builder(CH_MESSAGE).setSmallIcon(android.R.drawable.stat_notify_chat)
