@@ -13,8 +13,19 @@ adb shell am force-stop com.yakintalk.app
 adb shell am start -W -n com.yakintalk.app/.MainActivity
 sleep 8
 
+adb wait-for-device
+for i in 1 2 3 4 5; do
+  if adb get-state >/dev/null 2>&1; then break; fi
+  sleep 2
+done
+
 PID="$(adb shell pidof com.yakintalk.app 2>/dev/null | tr -d '\r' || true)"
-adb logcat -d > /tmp/ilet-logcat.txt
+for i in 1 2 3; do
+  if adb logcat -d > /tmp/ilet-logcat.txt 2>/dev/null; then break; fi
+  adb wait-for-device || true
+  sleep 2
+done
+test -s /tmp/ilet-logcat.txt
 
 if [[ -z "$PID" ]]; then
   echo "FAIL: ILET process exited after launch"
