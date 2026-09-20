@@ -60,7 +60,6 @@ jobs:
           script: |
             set -eu
             adb install -r ILET/app/build/outputs/apk/debug/app-debug.apk
-
             adb shell pm grant com.yakintalk.app android.permission.RECORD_AUDIO || true
             adb shell pm grant com.yakintalk.app android.permission.POST_NOTIFICATIONS || true
             adb shell pm grant com.yakintalk.app android.permission.NEARBY_WIFI_DEVICES || true
@@ -70,43 +69,30 @@ jobs:
             adb shell am start -W -n com.yakintalk.app/.MainActivity
             sleep 8
 
-            PID="$(adb shell pidof com.yakintalk.app | tr -d '\r')"
-            if [ -z "$PID" ]; then
-              echo "FAIL: İLET process exited after launch"
-              adb logcat -d
-              exit 1
-            fi
-            echo "PASS: İLET process alive, pid=$PID"
+            PID=$(adb shell pidof com.yakintalk.app | tr -d '\r')
+            test -n "$PID"
+            echo "PASS: ILET process alive after launch: $PID"
 
-            if adb logcat -d | grep -E "FATAL EXCEPTION|Process: com\.yakintalk\.app.*has died|AndroidRuntime.*com\.yakintalk\.app"; then
-              echo "FAIL: fatal runtime exception detected"
-              adb logcat -d
-              exit 1
-            fi
+            adb logcat -d > /tmp/ilet-logcat.txt
+            ! grep -E "FATAL EXCEPTION|Process: com\.yakintalk\.app.*has died|AndroidRuntime.*com\.yakintalk\.app" /tmp/ilet-logcat.txt
+            echo "PASS: no fatal runtime exception"
 
-            if adb shell dumpsys package com.yakintalk.app | grep -q "com.yakintalk.app.IletService"; then
-              echo "FAIL: IletService is still declared in installed manifest"
-              exit 1
-            fi
-            echo "PASS: no IletService declared in installed manifest"
+            adb shell dumpsys package com.yakintalk.app > /tmp/ilet-package.txt
+            ! grep -q "com.yakintalk.app.IletService" /tmp/ilet-package.txt
+            echo "PASS: IletService absent from installed manifest"
 
             adb shell input keyevent KEYCODE_HOME
             sleep 3
-
-            if adb shell dumpsys activity services com.yakintalk.app | grep -q "ServiceRecord"; then
-              echo "FAIL: background service remained after HOME"
-              adb shell dumpsys activity services com.yakintalk.app
-              exit 1
-            fi
+            adb shell dumpsys activity services com.yakintalk.app > /tmp/ilet-services.txt
+            ! grep -q "ServiceRecord" /tmp/ilet-services.txt
             echo "PASS: no background service after HOME"
 
             adb shell am start -W -n com.yakintalk.app/.MainActivity
             sleep 3
-            PID2="$(adb shell pidof com.yakintalk.app | tr -d '\r')"
+            PID2=$(adb shell pidof com.yakintalk.app | tr -d '\r')
             test -n "$PID2"
-            echo "PASS: İLET reopened successfully, pid=$PID2"
+            echo "PASS: ILET reopened successfully: $PID2"
 
-            adb logcat -d | tail -n 300 > /tmp/ilet-logcat.txt
 
       - name: Upload lint report
         if: always()
